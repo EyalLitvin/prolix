@@ -4,6 +4,7 @@ let
   cfg = config.prolix;
 
   git    = lib.getExe pkgs.git;
+  ssh    = lib.getExe pkgs.openssh;
   direnv = lib.getExe pkgs.direnv;
 
   # Resolve a path that may start with ~ using the known home directory.
@@ -25,7 +26,7 @@ let
         _prolix_dir=${lib.escapeShellArg "${baseDir}/${name}"}
         if [ ! -d "$_prolix_dir" ]; then
           echo "prolix: cloning ${name}..."
-          $DRY_RUN_CMD ${git} clone ${branchFlag}${lib.escapeShellArg project.url} "$_prolix_dir"
+          $DRY_RUN_CMD env GIT_SSH_COMMAND=${lib.escapeShellArg ssh} ${git} clone ${branchFlag}${lib.escapeShellArg project.url} "$_prolix_dir"
         fi
       )
     ''
