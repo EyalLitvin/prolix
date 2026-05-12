@@ -34,21 +34,21 @@
         shell = {
           enable = true;
 
-          packages = with pkgs; [
-            go
-            gopls
-            gotools
-            postgresql
-          ];
+          drv = pkgs.mkShell {
+            packages = with pkgs; [
+              go
+              gopls
+              gotools
+              postgresql
+            ];
 
-          env = {
             DATABASE_URL = "postgres://localhost/my_backend_dev";
             GO_ENV       = "development";
-          };
 
-          shellHook = ''
-            echo "entering my-backend dev shell"
-          '';
+            shellHook = ''
+              echo "entering my-backend dev shell"
+            '';
+          };
 
           # Set to true to run `direnv allow` automatically after writing .envrc.
           autoAllow = false;
@@ -62,7 +62,9 @@
         shell = {
           enable     = true;
           outputName = "legacy";  # points to devShells.<system>.legacy in system flake
-          packages   = with pkgs; [ nodejs_20 yarn ];
+          drv        = pkgs.mkShell {
+            packages = with pkgs; [ nodejs_20 yarn ];
+          };
         };
       };
 

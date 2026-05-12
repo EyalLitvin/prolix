@@ -153,21 +153,21 @@ To have prolix also manage your development environments, you need to:
       shell = {
         enable = true;
 
-        packages = with pkgs; [
-          go
-          gopls
-          gotools
-          postgresql
-        ];
+        drv = pkgs.mkShell {
+          packages = with pkgs; [
+            go
+            gopls
+            gotools
+            postgresql
+          ];
 
-        env = {
           DATABASE_URL = "postgres://localhost/mydb_dev";
           GO_ENV       = "development";
-        };
 
-        shellHook = ''
-          echo "entering my-backend"
-        '';
+          shellHook = ''
+            echo "entering my-backend"
+          '';
+        };
       };
     };
 
@@ -192,7 +192,7 @@ prolix writes a single-line `.envrc`:
 use flake /home/alice/.dotfiles#devShells.x86_64-linux.my-backend
 ```
 
-The file is only written if it does not already exist. If you delete it, prolix recreates it on the next `home-manager switch`. If you want to customise `.envrc` for a project, simply create the file yourself before running switch — prolix will leave it alone.
+prolix manages this file automatically: it is created on the first `home-manager switch` and updated whenever the flake reference changes (e.g. when you change `outputName` or `systemFlakePath`). If you want to customise `.envrc` for a project, create the file yourself — prolix only touches files that contain the `# managed by prolix` comment.
 
 ---
 
@@ -214,9 +214,7 @@ The file is only written if it does not already exist. If you delete it, prolix 
 | `url` | `str` | required | Git URL of the repository. Accepts `https://` and `git@` formats. |
 | `branch` | `str` or `null` | `null` | Branch to clone. Defaults to the repository's default branch. |
 | `shell.enable` | `bool` | `false` | Enable dev shell and `.envrc` management for this project. |
-| `shell.packages` | `[package]` | `[]` | Packages to make available in the dev shell. |
-| `shell.env` | `{ str = str; }` | `{}` | Environment variables to set in the dev shell. |
-| `shell.shellHook` | `str` | `""` | Commands to run when entering the dev shell. |
+| `shell.drv` | `package` or `null` | `null` | The dev shell derivation — typically `pkgs.mkShell { ... }`. Required when `shell.enable = true`. |
 | `shell.autoAllow` | `bool` | `false` | Run `direnv allow` automatically after writing `.envrc`. |
 | `shell.outputName` | `str` | `<name>` | Name of the `devShells` output in the system flake. Defaults to the project attribute name. |
 
@@ -253,7 +251,7 @@ legacy-app = {
   shell = {
     enable     = true;
     outputName = "legacy";   # devShells.<system>.legacy in the flake
-    packages   = with pkgs; [ nodejs_20 yarn ];
+    drv        = pkgs.mkShell { packages = with pkgs; [ nodejs_20 yarn ]; };
   };
 };
 ```
@@ -268,7 +266,7 @@ my-project = {
   shell = {
     enable    = true;
     autoAllow = true;
-    packages  = with pkgs; [ rustc cargo ];
+    drv       = pkgs.mkShell { packages = with pkgs; [ rustc cargo ]; };
   };
 };
 ```
@@ -298,7 +296,7 @@ Adds a `prolix.*` option namespace to the [flake-parts](https://github.com/hercu
 Adds the same `prolix.*` option namespace to the Home Manager evaluation context. Registers two [activation scripts](https://nix-community.github.io/home-manager/index.xhtml#sec-activation-script) that run on every `home-manager switch`:
 
 - `prolixClone` — clones any declared repo that does not exist at `<baseDir>/<name>`
-- `prolixEnvrc` — writes a `.envrc` into each shell-enabled project directory (if the file does not already exist)
+- `prolixEnvrc` — writes or updates the `.envrc` in each shell-enabled project directory (only touches files it previously created)
 
 Your `my-projects.nix` file is valid in both module contexts — it sets the same `prolix.*` options, and each module reads the values it cares about.
 
@@ -324,7 +322,7 @@ Run `direnv allow` once in the project directory. If you want this automated, se
 
 **The `.envrc` was not updated after I changed shell options**
 
-prolix does not overwrite an existing `.envrc`. Delete the file and run `home-manager switch` to regenerate it.
+prolix updates the `.envrc` automatically when the flake reference changes. If the file was not written by prolix (no `# managed by prolix` comment), it is left alone intentionally — delete it and run `home-manager switch` to let prolix take over.
 
 **`error: attribute 'prolix' missing` in the flake context**
 
